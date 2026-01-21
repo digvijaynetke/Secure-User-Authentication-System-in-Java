@@ -1,0 +1,23 @@
+# Generated files
+users.txt
+logs.txt
+
+# Compiled class files
+*.class
+
+# Package files
+*.jar
+*.war
+*.ear
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# Build directories
+out/
+bin/
+target/
+build/
