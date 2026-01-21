@@ -62,8 +62,11 @@ public class User {
      * @return User object or null if parsing fails
      */
     public static User fromString(String line) {
+        if (line == null || line.trim().isEmpty()) {
+            return null;
+        }
         try {
-            String[] parts = line.split(":");
+            String[] parts = line.split(":", 4);
             if (parts.length >= 2) {
                 String username = parts[0];
                 String hashedPassword = parts[1];

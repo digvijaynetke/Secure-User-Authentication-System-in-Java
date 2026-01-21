@@ -66,6 +66,12 @@ public class AuthService {
             return false;
         }
         
+        // Validate username format - alphanumeric and underscore only
+        if (!username.matches("^[a-zA-Z0-9_]+$")) {
+            System.out.println("Username can only contain letters, numbers, and underscores");
+            return false;
+        }
+        
         if (password == null || password.length() < 6) {
             System.out.println("Password must be at least 6 characters long");
             return false;

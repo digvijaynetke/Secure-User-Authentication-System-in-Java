@@ -1,5 +1,6 @@
 package com.auth.utils;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -14,9 +15,12 @@ public class PasswordUtils {
      * @return The hashed password as a hexadecimal string
      */
     public static String hashPassword(String password) {
+        if (password == null) {
+            throw new IllegalArgumentException("Password cannot be null");
+        }
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(password.getBytes());
+            byte[] hash = digest.digest(password.getBytes(StandardCharsets.UTF_8));
             
             // Convert byte array to hexadecimal string
             StringBuilder hexString = new StringBuilder();
@@ -40,6 +44,9 @@ public class PasswordUtils {
      * @return true if passwords match, false otherwise
      */
     public static boolean verifyPassword(String password, String hashedPassword) {
+        if (password == null || hashedPassword == null) {
+            return false;
+        }
         String hashedInput = hashPassword(password);
         return hashedInput.equals(hashedPassword);
     }
