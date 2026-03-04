@@ -1,9 +1,9 @@
 public class User {
 	private final String username;
 	private String hashedPassword;
-	private String role;
+	private Role role;
 
-	public User(String username, String hashedPassword, String role) {
+	public User(String username, String hashedPassword, Role role) {
 		this.username = username;
 		this.hashedPassword = hashedPassword;
 		this.role = role;
@@ -21,11 +21,11 @@ public class User {
 		this.hashedPassword = hashedPassword;
 	}
 
-	public String getRole() {
+	public Role getRole() {
 		return role;
 	}
 
-	public void setRole(String role) {
+	public void setRole(Role role) {
 		this.role = role;
 	}
 }

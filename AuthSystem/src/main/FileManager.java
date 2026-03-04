@@ -90,7 +90,7 @@ public class FileManager {
 	private static String serializeUser(User user) {
 		return user.getUsername()
 				+ FIELD_SEPARATOR + user.getHashedPassword()
-				+ FIELD_SEPARATOR + user.getRole();
+				+ FIELD_SEPARATOR + user.getRole().name();
 	}
 
 	private static User parseUser(String line) {
@@ -100,7 +100,12 @@ public class FileManager {
 		}
 		String username = parts[0];
 		String hashedPassword = parts[1];
-		String role = parts[2];
-		return new User(username, hashedPassword, role);
+		String roleText = parts[2];
+		try {
+			Role role = Role.valueOf(roleText);
+			return new User(username, hashedPassword, role);
+		} catch (IllegalArgumentException ex) {
+			return null;
+		}
 	}
 }
