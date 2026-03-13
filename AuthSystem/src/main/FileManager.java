@@ -6,7 +6,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class FileManager {
 	private static final String FIELD_SEPARATOR = "|";
@@ -78,6 +80,24 @@ public class FileManager {
 			writer.write(username);
 			writer.newLine();
 		}
+	}
+
+	public static Set<String> readLockedUsers(String lockedUsersFilePath) throws IOException {
+		Path path = Paths.get(lockedUsersFilePath);
+		Set<String> locked = new HashSet<>();
+		if (!Files.exists(path)) {
+			return locked;
+		}
+
+		List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);
+		for (String line : lines) {
+			if (line == null || line.trim().isEmpty()) {
+				continue;
+			}
+			locked.add(line.trim());
+		}
+
+		return locked;
 	}
 
 	private static void ensureParentDir(Path path) throws IOException {
