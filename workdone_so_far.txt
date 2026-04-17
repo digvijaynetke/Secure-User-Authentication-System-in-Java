@@ -1,0 +1,31 @@
+What’s done so far
+
+Core model: User with username, hashedPassword, and role using the Role enum in User.java and Role.java.
+Password hashing: SHA-256 hashing + constant-time compare in PasswordUtil.java.
+File handling: save/read users and lock users to file, plus load locked users in FileManager.java.
+Logging: timestamped audit logs written to logs file in Logger.java.
+Auth service: user cache with Map, registration, login, failed-attempt tracking, and locking in AuthService.java.
+Interface + exceptions: IAuthService, UserAlreadyExistsException, AuthException base, InvalidCredentialsException, AccountLockedException in IAuthService.java and the exception files.
+Current flow
+
+Startup:
+AuthService loads users from users file into Map<String, User>.
+AuthService loads locked usernames into Set<String>.
+Registration (registerUser):
+Check cache for existing username.
+If exists → throw UserAlreadyExistsException.
+Hash password with PasswordUtil.
+Create User, store in map, append to users file.
+Log REGISTER event.
+Login (loginUser):
+If username in locked set → throw AccountLockedException.
+If username not found in map → log fail, throw InvalidCredentialsException.
+Hash input password and compare to stored hash.
+If mismatch:
+Increment failed attempts.
+If attempts >= MAX_LOGIN_ATTEMPTS:
+Add to locked set, append to locked users file, log lock.
+Throw AccountLockedException.
+Else throw InvalidCredentialsException.
+If match:
+Reset attempts, log success, return User.

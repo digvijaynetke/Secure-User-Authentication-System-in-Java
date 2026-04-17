@@ -13,7 +13,7 @@ import java.util.Set;
 public class FileManager {
 	private static final String FIELD_SEPARATOR = "|";
 
-	public static void saveUser(User user, String usersFilePath) throws IOException {
+	public static void saveUser(AbstractUser user, String usersFilePath) throws IOException {
 		Path path = Paths.get(usersFilePath);
 		ensureParentDir(path);
 
@@ -27,20 +27,20 @@ public class FileManager {
 		}
 	}
 
-	public static List<User> readAllUsers(String usersFilePath) throws IOException {
+	public static List<AbstractUser> readAllUsers(String usersFilePath) throws IOException {
 		Path path = Paths.get(usersFilePath);
 		if (!Files.exists(path)) {
 			return new ArrayList<>();
 		}
 
 		List<String> lines = Files.readAllLines(path, StandardCharsets.UTF_8);
-		List<User> users = new ArrayList<>();
+		List<AbstractUser> users = new ArrayList<>();
 
 		for (String line : lines) {
 			if (line == null || line.trim().isEmpty()) {
 				continue;
 			}
-			User user = parseUser(line);
+			AbstractUser user = parseUser(line);
 			if (user != null) {
 				users.add(user);
 			}
@@ -50,7 +50,7 @@ public class FileManager {
 	}
 
 	public static boolean userExists(String username, String usersFilePath) throws IOException {
-		for (User user : readAllUsers(usersFilePath)) {
+		for (AbstractUser user : readAllUsers(usersFilePath)) {
 			if (user.getUsername().equals(username)) {
 				return true;
 			}
@@ -107,13 +107,13 @@ public class FileManager {
 		}
 	}
 
-	private static String serializeUser(User user) {
+	private static String serializeUser(AbstractUser user) {
 		return user.getUsername()
 				+ FIELD_SEPARATOR + user.getHashedPassword()
 				+ FIELD_SEPARATOR + user.getRole().name();
 	}
 
-	private static User parseUser(String line) {
+	private static AbstractUser parseUser(String line) {
 		String[] parts = line.split("\\|", -1);
 		if (parts.length < 3) {
 			return null;
@@ -123,9 +123,20 @@ public class FileManager {
 		String roleText = parts[2];
 		try {
 			Role role = Role.valueOf(roleText);
-			return new User(username, hashedPassword, role);
+			return createUser(role, username, hashedPassword);
 		} catch (IllegalArgumentException ex) {
 			return null;
+		}
+	}
+
+	private static AbstractUser createUser(Role role, String username, String hashedPassword) {
+		switch (role) {
+			case ADMIN:
+				return new AdminUser(username, hashedPassword);
+			case USER:
+				return new NormalUser(username, hashedPassword);
+			default:
+				return null;
 		}
 	}
 }

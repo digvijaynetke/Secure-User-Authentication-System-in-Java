@@ -8,17 +8,17 @@ import java.util.Set;
 public class AuthService implements IAuthService {
 	public static final int MAX_LOGIN_ATTEMPTS = 3;
 
-	private final Map<String, User> userCache = new HashMap<>();
+	private final Map<String, AbstractUser> userCache = new HashMap<>();
 	private final Map<String, Integer> failedAttempts = new HashMap<>();
 	private final Set<String> lockedUsers = new HashSet<>();
 	private final String usersFilePath;
 	private final String lockedUsersFilePath;
-	private final String logsFilePath;
+	private final ILogger logger;
 
 	public AuthService(String usersFilePath, String lockedUsersFilePath, String logsFilePath) throws IOException {
 		this.usersFilePath = usersFilePath;
 		this.lockedUsersFilePath = lockedUsersFilePath;
-		this.logsFilePath = logsFilePath;
+		this.logger = FileLogger.getInstance(logsFilePath);
 		loadUsers();
 		loadLockedUsers();
 	}
@@ -31,23 +31,23 @@ public class AuthService implements IAuthService {
 		}
 
 		String hashedPassword = PasswordUtil.hashPassword(plainPassword);
-		User user = new User(username, hashedPassword, role);
+		AbstractUser user = createUser(role, username, hashedPassword);
 
 		userCache.put(username, user);
 		FileManager.saveUser(user, usersFilePath);
-		Logger.logEvent("REGISTER | " + username + " | " + role.name(), logsFilePath);
+		logger.log(LogLevel.INFO, "REGISTER | " + username + " | " + role.name());
 	}
 
 	@Override
-	public User loginUser(String username, String plainPassword)
+	public AbstractUser loginUser(String username, String plainPassword)
 			throws AccountLockedException, InvalidCredentialsException, IOException {
 		if (lockedUsers.contains(username)) {
 			throw new AccountLockedException("Account locked: " + username);
 		}
 
-		User user = userCache.get(username);
+		AbstractUser user = userCache.get(username);
 		if (user == null) {
-			Logger.logEvent("LOGIN_FAIL | " + username + " | user_not_found", logsFilePath);
+			logger.log(LogLevel.WARN, "LOGIN_FAIL | " + username + " | user_not_found");
 			throw new InvalidCredentialsException("Invalid credentials");
 		}
 
@@ -55,12 +55,12 @@ public class AuthService implements IAuthService {
 		if (!isValid) {
 			int attempts = failedAttempts.getOrDefault(username, 0) + 1;
 			failedAttempts.put(username, attempts);
-			Logger.logEvent("LOGIN_FAIL | " + username + " | attempt=" + attempts, logsFilePath);
+			logger.log(LogLevel.WARN, "LOGIN_FAIL | " + username + " | attempt=" + attempts);
 
 			if (attempts >= MAX_LOGIN_ATTEMPTS) {
 				lockedUsers.add(username);
 				FileManager.lockUser(username, lockedUsersFilePath);
-				Logger.logEvent("ACCOUNT_LOCKED | " + username, logsFilePath);
+				logger.log(LogLevel.ERROR, "ACCOUNT_LOCKED | " + username);
 				throw new AccountLockedException("Account locked: " + username);
 			}
 
@@ -68,11 +68,11 @@ public class AuthService implements IAuthService {
 		}
 
 		failedAttempts.remove(username);
-		Logger.logEvent("LOGIN_SUCCESS | " + username, logsFilePath);
+		logger.log(LogLevel.INFO, "LOGIN_SUCCESS | " + username);
 		return user;
 	}
 
-	public Map<String, User> getUserCache() {
+	public Map<String, AbstractUser> getUserCache() {
 		return new HashMap<>(userCache);
 	}
 
@@ -81,8 +81,8 @@ public class AuthService implements IAuthService {
 	}
 
 	private void loadUsers() throws IOException {
-		List<User> users = FileManager.readAllUsers(usersFilePath);
-		for (User user : users) {
+		List<AbstractUser> users = FileManager.readAllUsers(usersFilePath);
+		for (AbstractUser user : users) {
 			userCache.put(user.getUsername(), user);
 		}
 	}
@@ -90,5 +90,16 @@ public class AuthService implements IAuthService {
 	private void loadLockedUsers() throws IOException {
 		lockedUsers.clear();
 		lockedUsers.addAll(FileManager.readLockedUsers(lockedUsersFilePath));
+	}
+
+	private AbstractUser createUser(Role role, String username, String hashedPassword) {
+		switch (role) {
+			case ADMIN:
+				return new AdminUser(username, hashedPassword);
+			case USER:
+				return new NormalUser(username, hashedPassword);
+			default:
+				throw new IllegalArgumentException("Unsupported role: " + role);
+		}
 	}
 }
