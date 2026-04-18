@@ -27,6 +27,22 @@ public class FileManager {
 		}
 	}
 
+	public static void writeAllUsers(List<AbstractUser> users, String usersFilePath) throws IOException {
+		Path path = Paths.get(usersFilePath);
+		ensureParentDir(path);
+
+		try (BufferedWriter writer = Files.newBufferedWriter(
+				path,
+				StandardCharsets.UTF_8,
+				StandardOpenOption.CREATE,
+				StandardOpenOption.TRUNCATE_EXISTING)) {
+			for (AbstractUser user : users) {
+				writer.write(serializeUser(user));
+				writer.newLine();
+			}
+		}
+	}
+
 	public static List<AbstractUser> readAllUsers(String usersFilePath) throws IOException {
 		Path path = Paths.get(usersFilePath);
 		if (!Files.exists(path)) {
@@ -102,6 +118,14 @@ public class FileManager {
 		}
 
 		return locked;
+	}
+
+	public static List<String> readLogs(String logsFilePath) throws IOException {
+		Path path = Paths.get(logsFilePath);
+		if (!Files.exists(path)) {
+			return new ArrayList<>();
+		}
+		return Files.readAllLines(path, StandardCharsets.UTF_8);
 	}
 
 	private static void ensureParentDir(Path path) throws IOException {

@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -13,15 +14,18 @@ public class AuthService implements IAuthService {
 	private final Set<String> lockedUsers = new HashSet<>();
 	private final String usersFilePath;
 	private final String lockedUsersFilePath;
+	private final String logsFilePath;
 	private final ILogger logger;
 
 	public AuthService(String usersFilePath, String lockedUsersFilePath, String logsFilePath) throws IOException {
-		this(usersFilePath, lockedUsersFilePath, FileLogger.getInstance(logsFilePath));
+		this(usersFilePath, lockedUsersFilePath, logsFilePath, FileLogger.getInstance(logsFilePath));
 	}
 
-	public AuthService(String usersFilePath, String lockedUsersFilePath, ILogger logger) throws IOException {
+	public AuthService(String usersFilePath, String lockedUsersFilePath, String logsFilePath, ILogger logger)
+			throws IOException {
 		this.usersFilePath = usersFilePath;
 		this.lockedUsersFilePath = lockedUsersFilePath;
+		this.logsFilePath = logsFilePath;
 		this.logger = logger;
 		loadUsers();
 		loadLockedUsers();
@@ -76,6 +80,28 @@ public class AuthService implements IAuthService {
 		return user;
 	}
 
+	@Override
+	public void changePassword(AbstractUser user, String newPlainPassword) throws IOException {
+		if (user == null) {
+			return;
+		}
+		String hashedPassword = PasswordUtil.hashPassword(newPlainPassword);
+		user.setHashedPassword(hashedPassword);
+		userCache.put(user.getUsername(), user);
+		persistUsers();
+		logger.log(LogLevel.INFO, "PASSWORD_CHANGED | " + user.getUsername());
+	}
+
+	@Override
+	public List<AbstractUser> listUsers() {
+		return new ArrayList<>(userCache.values());
+	}
+
+	@Override
+	public List<String> readLogs() throws IOException {
+		return FileManager.readLogs(logsFilePath);
+	}
+
 	public Map<String, AbstractUser> getUserCache() {
 		return new HashMap<>(userCache);
 	}
@@ -94,6 +120,10 @@ public class AuthService implements IAuthService {
 	private void loadLockedUsers() throws IOException {
 		lockedUsers.clear();
 		lockedUsers.addAll(FileManager.readLockedUsers(lockedUsersFilePath));
+	}
+
+	private void persistUsers() throws IOException {
+		FileManager.writeAllUsers(new ArrayList<>(userCache.values()), usersFilePath);
 	}
 
 	private AbstractUser createUser(Role role, String username, String hashedPassword) {

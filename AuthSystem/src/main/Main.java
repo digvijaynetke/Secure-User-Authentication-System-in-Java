@@ -9,7 +9,7 @@ public class Main {
 	public static void main(String[] args) {
 		try {
 			ILogger logger = FileLogger.getInstance(LOGS_FILE);
-			IAuthService authService = new AuthService(USERS_FILE, LOCKED_USERS_FILE, logger);
+			IAuthService authService = new AuthService(USERS_FILE, LOCKED_USERS_FILE, LOGS_FILE, logger);
 			runConsole(authService);
 		} catch (IOException ex) {
 			System.out.println("Startup failed. Check data file paths and permissions.");
@@ -75,13 +75,114 @@ public class Main {
 		try {
 			AbstractUser user = authService.loginUser(username, password);
 			System.out.println("Login successful. Welcome, " + user.getUsername() + ".");
-			user.showMenu();
+			handleUserMenu(authService, user, scanner);
 		} catch (AccountLockedException ex) {
 			System.out.println("Login blocked: account is locked.");
 		} catch (InvalidCredentialsException ex) {
 			System.out.println("Login failed: invalid credentials.");
 		} catch (IOException ex) {
 			System.out.println("Login failed: unable to read data files.");
+		}
+	}
+
+	private static void handleUserMenu(IAuthService authService, AbstractUser user, Scanner scanner) {
+		boolean inMenu = true;
+		while (inMenu) {
+			System.out.println();
+			user.showMenu();
+			System.out.print("Choose option: ");
+			String choice = scanner.nextLine().trim();
+			if ("3".equals(choice)) {
+				inMenu = false;
+				System.out.println("Logged out.");
+				continue;
+			}
+
+			if (user.getRole() == Role.ADMIN) {
+				handleAdminOption(authService, choice);
+			} else {
+				handleUserOption(authService, user, choice, scanner);
+			}
+		}
+	}
+
+	private static void handleUserOption(
+			IAuthService authService,
+			AbstractUser user,
+			String choice,
+			Scanner scanner) {
+		switch (choice) {
+			case "1":
+				System.out.println("Username: " + user.getUsername());
+				System.out.println("Role: " + user.getRole().name());
+				break;
+			case "2":
+				handlePasswordChange(authService, user, scanner);
+				break;
+			default:
+				System.out.println("Invalid option. Try again.");
+				break;
+		}
+	}
+
+	private static void handleAdminOption(IAuthService authService, String choice) {
+		switch (choice) {
+			case "1":
+				printUsers(authService);
+				break;
+			case "2":
+				printLogs(authService);
+				break;
+			default:
+				System.out.println("Invalid option. Try again.");
+				break;
+		}
+	}
+
+	private static void handlePasswordChange(IAuthService authService, AbstractUser user, Scanner scanner) {
+		System.out.print("New password: ");
+		String newPassword = scanner.nextLine();
+		System.out.print("Confirm password: ");
+		String confirmPassword = scanner.nextLine();
+		if (!newPassword.equals(confirmPassword)) {
+			System.out.println("Passwords do not match.");
+			return;
+		}
+
+		try {
+			authService.changePassword(user, newPassword);
+			System.out.println("Password updated.");
+		} catch (IOException ex) {
+			System.out.println("Unable to update password.");
+		}
+	}
+
+	private static void printUsers(IAuthService authService) {
+		java.util.List<AbstractUser> users = authService.listUsers();
+		if (users.isEmpty()) {
+			System.out.println("No users found.");
+			return;
+		}
+		System.out.println("Users:");
+		for (AbstractUser user : users) {
+			System.out.println("- " + user.getUsername() + " | " + user.getRole().name());
+		}
+	}
+
+	private static void printLogs(IAuthService authService) {
+		try {
+			java.util.List<String> logs = authService.readLogs();
+			if (logs.isEmpty()) {
+				System.out.println("No logs available.");
+				return;
+			}
+			System.out.println("Logs:");
+			int start = Math.max(0, logs.size() - 20);
+			for (int i = start; i < logs.size(); i++) {
+				System.out.println(logs.get(i));
+			}
+		} catch (IOException ex) {
+			System.out.println("Unable to read logs.");
 		}
 	}
 
