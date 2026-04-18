@@ -40,9 +40,13 @@ public class FileManager {
 			if (line == null || line.trim().isEmpty()) {
 				continue;
 			}
-			AbstractUser user = parseUser(line);
-			if (user != null) {
-				users.add(user);
+			try {
+				AbstractUser user = parseUser(line);
+				if (user != null) {
+					users.add(user);
+				}
+			} catch (RuntimeException ex) {
+				// Skip malformed lines to avoid startup failure.
 			}
 		}
 
@@ -121,12 +125,34 @@ public class FileManager {
 		String username = parts[0];
 		String hashedPassword = parts[1];
 		String roleText = parts[2];
+		if (username == null || username.trim().isEmpty()) {
+			return null;
+		}
+		if (!isValidHash(hashedPassword)) {
+			return null;
+		}
 		try {
 			Role role = Role.valueOf(roleText);
 			return createUser(role, username, hashedPassword);
 		} catch (IllegalArgumentException ex) {
 			return null;
 		}
+	}
+
+	private static boolean isValidHash(String hashedPassword) {
+		if (hashedPassword == null || hashedPassword.length() != 64) {
+			return false;
+		}
+		for (int i = 0; i < hashedPassword.length(); i++) {
+			char c = hashedPassword.charAt(i);
+			boolean isHex = (c >= '0' && c <= '9')
+					|| (c >= 'a' && c <= 'f')
+					|| (c >= 'A' && c <= 'F');
+			if (!isHex) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private static AbstractUser createUser(Role role, String username, String hashedPassword) {

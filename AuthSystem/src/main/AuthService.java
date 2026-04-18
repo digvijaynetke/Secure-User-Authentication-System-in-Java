@@ -16,9 +16,13 @@ public class AuthService implements IAuthService {
 	private final ILogger logger;
 
 	public AuthService(String usersFilePath, String lockedUsersFilePath, String logsFilePath) throws IOException {
+		this(usersFilePath, lockedUsersFilePath, FileLogger.getInstance(logsFilePath));
+	}
+
+	public AuthService(String usersFilePath, String lockedUsersFilePath, ILogger logger) throws IOException {
 		this.usersFilePath = usersFilePath;
 		this.lockedUsersFilePath = lockedUsersFilePath;
-		this.logger = FileLogger.getInstance(logsFilePath);
+		this.logger = logger;
 		loadUsers();
 		loadLockedUsers();
 	}
